@@ -1,65 +1,167 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Sidebar from "./components/Sidebar";
+import DashboardView from "./components/DashboardView";
+import JobsTable from "./components/JobsTable";
+import SettingsView from "./components/SettingsView";
+import NewJobModal from "./components/NewJobModal";
+import type { Job } from "./types";
+
+type View = "dashboard" | "jobs" | "settings";
 
 export default function Home() {
+  const [view, setView] = useState<View>("dashboard");
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [showNewJob, setShowNewJob] = useState(false);
+  const [apiBase, setApiBase] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadJobs = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/v1/jobs`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const rawJobs = Array.isArray(data) ? data : [];
+      const mappedJobs = rawJobs.map((j: any) => ({
+        id: j.id || j.ID,
+        name: j.name || j.Name,
+        date: j.date || j.Date,
+        status: (j.status || j.Status || "pending").toLowerCase() === "ok" ? "completed" : (j.status || j.Status || "pending"),
+        data: j.data || j.Data || {}
+      }));
+      setJobs(mappedJobs);
+      setJobsError(null);
+    } catch (e: unknown) {
+      setJobsError(e instanceof Error ? e.message : "Failed to load jobs");
+    } finally {
+      setJobsLoading(false);
+    }
+  }, [apiBase]);
+
+  useEffect(() => {
+    setJobsLoading(true);
+    loadJobs();
+    pollRef.current = setInterval(loadJobs, 8000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [loadJobs]);
+
+  function handleViewChange(v: View) {
+    setView(v);
+  }
+
+  function pageTitle() {
+    if (view === "dashboard") return "Overview";
+    if (view === "jobs") return "Jobs";
+    if (view === "settings") return "Settings";
+    return "";
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      <Sidebar
+        view={view}
+        onViewChange={(v) => {
+          if (v === "new-job") setShowNewJob(true);
+          else handleViewChange(v as View);
+        }}
+        jobCount={jobs?.length ?? 0}
+      />
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Top bar */}
+        <header
+          style={{
+            height: 60, flexShrink: 0,
+            borderBottom: "1px solid var(--border)",
+            display: "flex", alignItems: "center",
+            padding: "0 28px",
+            background: "var(--bg-card)",
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600 }}>
+              MapMatrix
+            </span>
+            <span style={{ color: "var(--border-bright)", margin: "0 8px" }}>›</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{pageTitle()}</span>
+          </div>
+
+          {/* Live indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
+            <span
+              className="pulse-dot"
+              style={{ background: jobsError ? "var(--rose)" : "var(--emerald)" }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <span>{jobsLoading ? "Connecting…" : jobsError ? "Offline" : "API Live"}</span>
+          </div>
+
+          <div
+            style={{
+              padding: "4px 12px",
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              fontSize: 11, color: "var(--text-muted)",
+            }}
           >
-            Documentation
-          </a>
-        </div>
-      </main>
+            <span className="mono">{apiBase || "→ localhost:3000 (proxy)"}</span>
+          </div>
+        </header>
+
+        {/* Scrollable content area */}
+        <main style={{ flex: 1, overflow: "auto", padding: 28 }}>
+          {view === "dashboard" && (
+            <DashboardView
+              jobs={jobs}
+              loading={jobsLoading}
+              onNewJob={() => setShowNewJob(true)}
+            />
+          )}
+
+          {view === "jobs" && (
+            <div>
+              <div style={{ marginBottom: 22 }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Scrape Jobs</h1>
+                <p style={{ fontSize: 14, color: "var(--text-muted)" }}>
+                  Create, monitor, and download all your Google Maps scraping tasks
+                </p>
+              </div>
+              <JobsTable
+                jobs={jobs}
+                loading={jobsLoading}
+                error={jobsError}
+                apiBase={apiBase}
+                onRefresh={loadJobs}
+                onJobsChange={setJobs}
+                onNewJob={() => setShowNewJob(true)}
+              />
+            </div>
+          )}
+
+          {view === "settings" && (
+            <SettingsView
+              apiBase={apiBase}
+              onApiBaseChange={setApiBase}
+            />
+          )}
+        </main>
+      </div>
+
+      {showNewJob && (
+        <NewJobModal
+          apiBase={apiBase}
+          onJobCreated={(job) => {
+            setJobs((prev) => [job, ...(Array.isArray(prev) ? prev : [])]);
+            setView("jobs");
+          }}
+          onClose={() => setShowNewJob(false)}
+        />
+      )}
     </div>
   );
 }
