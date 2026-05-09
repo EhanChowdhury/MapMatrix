@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Sidebar from "./components/Sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import DashboardView from "./components/DashboardView";
 import JobsTable from "./components/JobsTable";
 import SettingsView from "./components/SettingsView";
@@ -16,7 +17,7 @@ export default function Home() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [showNewJob, setShowNewJob] = useState(false);
-  const [apiBase, setApiBase] = useState("");
+  const apiBase = ""; // Always use the Next.js proxy
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadJobs = useCallback(async () => {
@@ -39,7 +40,7 @@ export default function Home() {
     } finally {
       setJobsLoading(false);
     }
-  }, [apiBase]);
+  }, []);
 
   useEffect(() => {
     setJobsLoading(true);
@@ -60,61 +61,65 @@ export default function Home() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-      <Sidebar
-        view={view}
+    <>
+      <AppSidebar
+        view={view as any}
         onViewChange={(v) => {
           if (v === "new-job") setShowNewJob(true);
           else handleViewChange(v as View);
         }}
         jobCount={jobs?.length ?? 0}
+        isError={!!jobsError}
+        isLoading={jobsLoading}
       />
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <SidebarInset className="flex flex-col overflow-hidden bg-background">
         {/* Top bar */}
-        <header
-          style={{
-            height: 60, flexShrink: 0,
-            borderBottom: "1px solid var(--border)",
-            display: "flex", alignItems: "center",
-            padding: "0 28px",
-            background: "var(--bg-card)",
-            gap: 12,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 600 }}>
-              MapMatrix
-            </span>
-            <span style={{ color: "var(--border-bright)", margin: "0 8px" }}>›</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{pageTitle()}</span>
+        <header className="h-20 flex items-center px-10 border-b border-white/[0.03] bg-background/80 backdrop-blur-2xl shrink-0 gap-8 sticky top-0 z-20">
+          <SidebarTrigger className="-ml-3 size-10 rounded-xl hover:bg-white/5 transition-all text-slate-400" />
+
+          <div className="flex-1 flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.25em]">
+                Matrix
+              </span>
+              <span className="size-1 rounded-full bg-slate-700" />
+              <span className="text-base font-black text-foreground tracking-tight">{pageTitle()}</span>
+            </div>
           </div>
 
           {/* Live indicator */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
-            <span
-              className="pulse-dot"
-              style={{ background: jobsError ? "var(--rose)" : "var(--emerald)" }}
-            />
-            <span>{jobsLoading ? "Connecting…" : jobsError ? "Offline" : "API Live"}</span>
+          <div className="flex items-center gap-6">
+            <div className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border shadow-sm transition-colors ${
+              jobsError ? "bg-rose-500/5 border-rose-500/10 text-rose-500" : 
+              jobsLoading ? "bg-amber-500/5 border-amber-500/10 text-amber-500" : 
+              "bg-emerald-500/5 border-emerald-500/10 text-emerald-500"
+            }`}>
+              <div className="relative">
+                <span className={`size-1.5 rounded-full block ${
+                  jobsError ? "bg-rose-500" : 
+                  jobsLoading ? "bg-amber-500" : 
+                  "bg-emerald-500"
+                }`} />
+                {!jobsError && (
+                  <span className={`absolute inset-0 size-1.5 rounded-full animate-ping opacity-40 ${
+                    jobsLoading ? "bg-amber-500" : "bg-emerald-500"
+                  }`} />
+                )}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.1em] current-color">
+                {jobsLoading ? "Syncing…" : jobsError ? "Offline" : "System Live"}
+              </span>
+            </div>
+
+
+
           </div>
 
-          <div
-            style={{
-              padding: "4px 12px",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              fontSize: 11, color: "var(--text-muted)",
-            }}
-          >
-            <span className="mono">{apiBase || "→ localhost:3000 (proxy)"}</span>
-          </div>
         </header>
 
         {/* Scrollable content area */}
-        <main style={{ flex: 1, overflow: "auto", padding: 28 }}>
+        <main className="flex-1 overflow-auto p-8 lg:p-12">
           {view === "dashboard" && (
             <DashboardView
               jobs={jobs}
@@ -124,10 +129,10 @@ export default function Home() {
           )}
 
           {view === "jobs" && (
-            <div>
-              <div style={{ marginBottom: 22 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Scrape Jobs</h1>
-                <p style={{ fontSize: 14, color: "var(--text-muted)" }}>
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-8">
+                <h1 className="text-3xl font-extrabold tracking-tight mb-2">Scrape Jobs</h1>
+                <p className="text-sm text-muted-foreground">
                   Create, monitor, and download all your Google Maps scraping tasks
                 </p>
               </div>
@@ -144,13 +149,10 @@ export default function Home() {
           )}
 
           {view === "settings" && (
-            <SettingsView
-              apiBase={apiBase}
-              onApiBaseChange={setApiBase}
-            />
+            <SettingsView />
           )}
         </main>
-      </div>
+      </SidebarInset>
 
       {showNewJob && (
         <NewJobModal
@@ -162,6 +164,6 @@ export default function Home() {
           onClose={() => setShowNewJob(false)}
         />
       )}
-    </div>
+    </>
   );
 }

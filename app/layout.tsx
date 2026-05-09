@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "MapMatrix by Sytax — Google Maps Scraper Dashboard",
@@ -7,11 +11,14 @@ export const metadata: Metadata = {
     "Manage and monitor your Google Maps scraping jobs with the MapMatrix dashboard by Sytax.",
 };
 
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className={cn("h-full dark", "font-sans", inter.variable)} suppressHydrationWarning>
       <head>
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -26,7 +33,13 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <TooltipProvider>
+          <SidebarProvider>
+            {children}
+          </SidebarProvider>
+        </TooltipProvider>
+      </body>
     </html>
   );
 }

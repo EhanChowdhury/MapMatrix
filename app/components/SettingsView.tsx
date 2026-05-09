@@ -2,81 +2,29 @@
 
 import { useState } from "react";
 
-interface Props {
-  apiBase: string;
-  onApiBaseChange: (v: string) => void;
-}
+interface Props {}
 
-export default function SettingsView({ apiBase, onApiBaseChange }: Props) {
-  const [draft, setDraft] = useState(apiBase);
-  const [saved, setSaved] = useState(false);
-
-  function save() {
-    onApiBaseChange(draft.replace(/\/$/, ""));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
+export default function SettingsView({}: Props) {
   return (
-    <div style={{ maxWidth: 600 }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>Settings</h1>
-        <p style={{ fontSize: 14, color: "var(--text-muted)" }}>Configure your MapMatrix dashboard</p>
-      </div>
-
-      {/* API Base */}
-      <div className="card" style={{ padding: "24px 28px", marginBottom: 16 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Backend Connection</h2>
-        <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18, lineHeight: 1.5 }}>
-          Requests are proxied through Next.js to avoid CORS. Set the backend target here — it maps to the
-          {" "}<code className="mono" style={{ color: "var(--accent)", fontSize: 12 }}>NEXT_PUBLIC_API_BASE</code>{" "}
-          env variable (default: <code className="mono" style={{ color: "var(--accent)", fontSize: 12 }}>http://localhost:3000</code>).
-          After changing this, restart the dev server.
-        </p>
-
-        <label className="label">API Base URL</label>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input
-            className="input"
-            value={draft}
-            onChange={(e) => { setDraft(e.target.value); setSaved(false); }}
-            placeholder="http://localhost:8080"
-          />
-          <button
-            onClick={save}
-            className={`btn ${saved ? "btn-ghost" : "btn-primary"}`}
-            style={{ whiteSpace: "nowrap" }}
-          >
-            {saved ? "✓ Saved" : "Save"}
-          </button>
-        </div>
-
-        <div style={{ marginTop: 14, padding: "10px 14px", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" }}>
-            Resolved endpoints
-          </div>
-          {["/api/v1/jobs", "/api/v1/jobs/{id}", "/api/v1/jobs/{id}/download"].map((ep) => (
-            <div key={ep} style={{ fontSize: 12, marginBottom: 3 }}>
-              <span style={{ color: "var(--text-muted)" }}>{draft || "http://localhost:8080"}</span>
-              <span className="mono" style={{ color: "var(--accent)" }}>{ep}</span>
-            </div>
-          ))}
-        </div>
+    <div className="max-w-2xl mx-auto flex flex-col gap-10">
+      <div>
+        <h1 className="text-3xl font-black tracking-tightest mb-2">Global Settings</h1>
+        <p className="text-slate-500 font-medium">System configuration and environment manifest.</p>
       </div>
 
       {/* About */}
-      <div className="card" style={{ padding: "24px 28px" }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>About MapMatrix</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="card-glass p-10">
+        <h2 className="text-lg font-black tracking-tight mb-8">System Manifest</h2>
+        <div className="flex flex-col gap-2">
           {[
-            ["Product", "MapMatrix Dashboard"],
-            ["Made by", "Sytax"],
-            ["API Version", "v1.0.0"],
-            ["Protocol", "OpenAPI 3.0.3"],
+            ["Module", "MapMatrix Core Engine"],
+            ["Developer", "Sytax Development"],
+            ["Version", "1.0.2 Stable"],
+            ["License", "Enterprise Node"],
           ].map(([k, v]) => (
-            <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(99,120,180,0.08)", fontSize: 13 }}>
-              <span style={{ color: "var(--text-muted)" }}>{k}</span>
-              <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{v}</span>
+            <div key={k} className="flex items-center justify-between py-4 border-b border-white/[0.03] last:border-0">
+              <span className="text-sm font-bold text-slate-500">{k}</span>
+              <span className="text-sm font-black text-foreground tracking-tight">{v}</span>
             </div>
           ))}
         </div>

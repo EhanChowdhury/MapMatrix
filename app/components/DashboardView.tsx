@@ -14,29 +14,30 @@ function StatCard({
   label: string; value: string | number; sub?: string; color: string; icon: string;
 }) {
   return (
-    <div
-      className="card card-glow"
-      style={{ padding: "22px 24px", display: "flex", alignItems: "center", gap: 16 }}
-    >
+    <div className="stat-card group">
       <div
+        className="size-12 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-transform duration-300 group-hover:scale-110"
         style={{
-          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-          background: `${color}1a`,
-          border: `1px solid ${color}33`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20,
+          background: `${color}15`,
+          border: `1px solid ${color}30`,
+          color: color,
         }}
       >
         {icon}
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+      <div className="flex-1 min-w-0">
+        <div className="text-3xl font-black tracking-tighter text-foreground leading-none mb-1">
           {value}
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>{label}</div>
-        {sub && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{sub}</div>}
+        <div className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">
+          {label}
+        </div>
+        {sub && (
+          <div className="text-[10px] text-muted-foreground/40 mt-1 truncate">
+            {sub}
+          </div>
+        )}
       </div>
-      <div style={{ width: 3, height: 40, borderRadius: 99, background: color, opacity: 0.7 }} />
     </div>
   );
 }
@@ -44,29 +45,29 @@ function StatCard({
 function RecentJobRow({ job }: { job: Job }) {
   const s = (job.status || "pending").toLowerCase();
   const color =
-    ["running", "active", "in_progress"].includes(s) ? "var(--accent)" :
+    ["running", "active", "in_progress", "working"].includes(s) ? "var(--amber)" :
       ["completed", "done", "finished"].includes(s) ? "var(--emerald)" :
         ["failed", "error"].includes(s) ? "var(--rose)" : "var(--amber)";
-  const isRunning = ["running", "active", "in_progress"].includes(s);
+  const isRunning = ["running", "active", "in_progress", "working"].includes(s);
 
   return (
-    <div
-      style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "12px 0",
-        borderBottom: "1px solid rgba(99,120,180,0.08)",
-      }}
-    >
-      <span className="pulse-dot" style={{ background: color, animationPlayState: isRunning ? "running" : "paused", flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+    <div className="flex items-center gap-4 py-3.5 border-b border-white/[0.03] last:border-0 group transition-colors">
+      <div className="relative shrink-0">
+        <span className="pulse-dot block" style={{ background: color, animationPlayState: isRunning ? "running" : "paused" }} />
+        {isRunning && <span className="absolute inset-0 bg-current rounded-full animate-ping opacity-20" style={{ color }} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
           {job.name}
         </div>
-        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>
-          {job.data?.keywords?.slice(0, 2).join(", ")}
+        <div className="text-[10px] text-muted-foreground font-medium truncate mt-0.5">
+          {job.data?.keywords?.slice(0, 2).join(", ") || "No keywords"}
         </div>
       </div>
-      <div style={{ fontSize: 12, color, fontWeight: 500, flexShrink: 0 }}>
+      <div
+        className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border"
+        style={{ color, borderColor: `${color}20`, background: `${color}08` }}
+      >
         {job.status || "Pending"}
       </div>
     </div>
@@ -76,154 +77,118 @@ function RecentJobRow({ job }: { job: Job }) {
 export default function DashboardView({ jobs: jobsProp, loading, onNewJob }: Props) {
   const jobs = jobsProp ?? [];
   const total = jobs.length;
-  const running = jobs.filter((j) => ["running", "active", "in_progress"].includes((j.status || "pending").toLowerCase())).length;
+  const running = jobs.filter((j) => ["running", "active", "in_progress", "working"].includes((j.status || "pending").toLowerCase())).length;
   const done = jobs.filter((j) => ["completed", "done", "finished"].includes((j.status || "pending").toLowerCase())).length;
   const failed = jobs.filter((j) => ["failed", "error"].includes((j.status || "pending").toLowerCase())).length;
 
   const recent = [...jobs]
+    .filter((j) => !["pending", "queued"].includes((j.status || "pending").toLowerCase()))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 8);
+    .slice(0, 6);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+    <div className="flex flex-col gap-10 max-w-7xl mx-auto">
       {/* Hero */}
-      <div
-        className="card"
-        style={{
-          padding: "36px 40px",
-          background: "linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.08) 100%)",
-          border: "1px solid rgba(59,130,246,0.2)",
-          position: "relative", overflow: "hidden",
-        }}
-      >
-        {/* Decorative orb */}
-        <div style={{
-          position: "absolute", right: -40, top: -40,
-          width: 200, height: 200, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", right: 80, bottom: -60,
-          width: 150, height: 150, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }} />
+      <div className="relative p-10 lg:p-14 card-glass overflow-hidden border-blue-500/10 group">
+        <div className="absolute top-0 right-0 w-[40%] h-full bg-linear-to-l from-blue-600/10 to-transparent pointer-events-none" />
+        <div className="absolute -top-24 -right-24 size-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <div
-                style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 18,
-                }}
-              >
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="size-10 rounded-2xl bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
                 ⬡
               </div>
-              <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                MapMatrix Dashboard
+              <span className="text-[10px] font-black  tracking-[0.3em] text-blue-400">
+                MapEngine v1.0
               </span>
             </div>
-            <h1
-              style={{
-                fontSize: 32, fontWeight: 800, letterSpacing: "-0.5px",
-                background: "linear-gradient(135deg, #e2e8f0, #94a3b8)",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                lineHeight: 1.1, marginBottom: 10,
-              }}
-            >
-              Google Maps Scraper<br />for NIBIZ SOFT
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tightest leading-[1.05] mb-6">
+              Scrape Leads <br />
+              <span className="bg-linear-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-gradient">
+                Fast & Reliably
+              </span>
             </h1>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", maxWidth: 420, lineHeight: 1.6 }}>
-              Manage scraping jobs, monitor progress, and extract business data from Google Maps — all in one dashboard.
+            <p className="text-base text-slate-400 leading-relaxed font-medium">
+              Extract high-fidelity business data at scale. MapMatrix especially designed for NIBIZSOFT is the easiest and most
+              efficient way to scrape Google Maps.
             </p>
           </div>
-          <button onClick={onNewJob} className="btn btn-primary" style={{ fontSize: 15, padding: "12px 24px" }}>
-            + Launch New Job
+          <button
+            onClick={onNewJob}
+            className="btn-premium btn-premium-primary text-base px-8 py-4 self-start lg:self-center"
+          >
+            Start Scraping
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
-        <StatCard label="Total Jobs" value={loading ? "…" : total} color="#60a5fa" icon="◈" />
-        <StatCard label="Running" value={loading ? "…" : running} sub="currently active" color="#3b82f6" icon="⟳" />
-        <StatCard label="Completed" value={loading ? "…" : done} sub="ready to download" color="#10b981" icon="✓" />
-        <StatCard label="Failed" value={loading ? "…" : failed} sub="need attention" color="#f43f5e" icon="✕" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Total Operations" value={loading ? "…" : total} color="#3b82f6" icon="◈" />
+        <StatCard label="Active Now" value={loading ? "…" : running} sub="Processing live" color="#f59e0b" icon="⟳" />
+        <StatCard label="Successful" value={loading ? "…" : done} sub="Data ready" color="#10b981" icon="✓" />
+        <StatCard label="Failed" value={loading ? "…" : failed} sub="Needs review" color="#f43f5e" icon="✕" />
       </div>
 
-      {/* Recent Jobs */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      {/* Grid Content */}
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
         {/* Recent list */}
-        <div className="card" style={{ padding: "22px 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>Recent Jobs</h2>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{recent.length} shown</span>
+        <div className="xl:col-span-3 card-glass p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-lg font-black tracking-tight">Recent Activity</h2>
+            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              {recent.length} Jobs
+            </div>
           </div>
           {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {[1, 2, 3].map((i) => <div key={i} className="shimmer" style={{ height: 44, width: "100%" }} />)}
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3, 4].map((i) => <div key={i} className="shimmer h-16 w-full rounded-2xl" />)}
             </div>
           ) : recent.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "30px 0", color: "var(--text-muted)", fontSize: 13 }}>
-              No jobs yet — create your first one above
+            <div className="text-center py-16 text-slate-500 font-medium italic text-sm border-2 border-dashed border-white/5 rounded-3xl">
+              No recent activity. Start your first scrape above.
             </div>
           ) : (
-            <div>
+            <div className="flex flex-col">
               {recent.map((job) => <RecentJobRow key={job.id} job={job} />)}
             </div>
           )}
         </div>
 
         {/* Quick guide */}
-        <div className="card" style={{ padding: "22px 24px" }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Quick Start</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { num: "01", title: "Create a Job", desc: "Enter keywords, language, and geo settings to start scraping Maps.", color: "var(--accent)" },
-              { num: "02", title: "Monitor Progress", desc: "Jobs auto-refresh every 8s. Running jobs show a live pulse indicator.", color: "var(--violet)" },
-              { num: "03", title: "Download Results", desc: "Once complete, download your data as a CSV with a single click.", color: "var(--emerald)" },
-            ].map((step) => (
-              <div key={step.num} style={{ display: "flex", gap: 14 }}>
-                <div
-                  style={{
-                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                    background: `${step.color}1a`, border: `1px solid ${step.color}33`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: step.color, fontFamily: "JetBrains Mono, monospace",
-                  }}
-                >
-                  {step.num}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
-                    {step.title}
+        <div className="xl:col-span-2 flex flex-col gap-8">
+          <div className="card-glass p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-6xl pointer-events-none">⚡</div>
+            <h2 className="text-lg font-black tracking-tight mb-8">Fast Track</h2>
+            <div className="flex flex-col gap-6">
+              {[
+                { title: "Define Target", desc: "Select keywords and geography.", colorClass: "bg-blue-500/10 border-blue-500/20 text-blue-400" },
+                { title: "Scale Up", desc: "Enable Fast Mode for 10x speed.", colorClass: "bg-purple-500/10 border-purple-500/20 text-purple-400" },
+                { title: "Export Data", desc: "One-click CSV downloads.", colorClass: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" },
+              ].map((step, i) => (
+                <div key={i} className="flex gap-4 group">
+                  <div className={`size-10 rounded-xl border flex items-center justify-center text-[10px] font-black shrink-0 group-hover:scale-110 transition-transform ${step.colorClass}`}>
+                    0{i + 1}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                    {step.desc}
+                  <div>
+                    <div className="text-sm font-bold mb-1 tracking-tight">{step.title}</div>
+                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{step.desc}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* API endpoint */}
-          <div
-            style={{
-              marginTop: 20, padding: "12px 14px",
-              background: "var(--bg-elevated)", border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-            }}
-          >
-            <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 4 }}>
-              API Base
+          <div className="card-glass p-6 border-blue-500/20 bg-blue-500/5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="size-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-xs shadow-lg">✉</div>
+              <div>
+                <div className="text-xs font-bold">Email Scraper</div>
+                <div className="text-[10px] text-blue-400/80 font-medium">Capture business leads directly</div>
+              </div>
             </div>
-            <code className="mono" style={{ fontSize: 12, color: "var(--accent)" }}>
-              http://localhost:8080/api/v1
-            </code>
+            <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md">MohaDada 😜</div>
           </div>
         </div>
       </div>

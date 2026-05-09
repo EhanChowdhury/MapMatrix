@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Job } from "../types";
 import JobRow from "./JobRow";
+import CSVViewerModal from "./CSVViewerModal";
 
 interface Props {
   jobs: Job[];
@@ -15,7 +16,7 @@ interface Props {
 }
 
 type SortKey = "date" | "name" | "status";
-type Filter = "all" | "running" | "done" | "failed" | "pending";
+type Filter = "all" | "running" | "done" | "failed";
 
 export default function JobsTable({ jobs: jobsProp, loading, error, apiBase, onRefresh, onJobsChange, onNewJob }: Props) {
   const jobs = jobsProp ?? [];
@@ -24,6 +25,7 @@ export default function JobsTable({ jobs: jobsProp, loading, error, apiBase, onR
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingJob, setViewingJob] = useState<{ id: string, name: string } | null>(null);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this job? This cannot be undone.")) return;
@@ -49,12 +51,14 @@ export default function JobsTable({ jobs: jobsProp, loading, error, apiBase, onR
 
   const filtered = jobs
     .filter((j) => {
+      const s = (j.status || "pending").toLowerCase();
+      // Global filter: Remove pending jobs from the table entirely
+      if (s === "pending" || s === "queued") return false;
+
       if (filter !== "all") {
-        const s = (j.status || "pending").toLowerCase();
-        if (filter === "running" && !["running", "active", "in_progress"].includes(s)) return false;
+        if (filter === "running" && !["running", "active", "in_progress", "working"].includes(s)) return false;
         if (filter === "done" && !["completed", "done", "finished"].includes(s)) return false;
         if (filter === "failed" && !["failed", "error"].includes(s)) return false;
-        if (filter === "pending" && !["pending", "queued"].includes(s)) return false;
       }
       if (search) {
         const q = search.toLowerCase();
@@ -76,117 +80,107 @@ export default function JobsTable({ jobs: jobsProp, loading, error, apiBase, onR
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: "All" },
-    { key: "running", label: "Running" },
+    { key: "running", label: "Working" },
     { key: "done", label: "Done" },
     { key: "failed", label: "Failed" },
-    { key: "pending", label: "Pending" },
   ];
 
   const SortBtn = ({ col, label }: { col: SortKey; label: string }) => (
     <button
       onClick={() => handleSort(col)}
-      style={{
-        background: "none", border: "none", cursor: "pointer", display: "inline-flex",
-        alignItems: "center", gap: 4, color: sort === col ? "var(--accent)" : "var(--text-muted)",
-        fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
-        fontFamily: "inherit",
-      }}
+      className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${sort === col ? "text-primary" : "text-slate-500 hover:text-slate-300"}`}
     >
       {label}
-      <span style={{ fontSize: 9 }}>{sort === col ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+      <span className="text-[9px] opacity-40">{sort === col ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
     </button>
   );
 
   return (
-    <div>
+    <>
+    <div className="flex flex-col gap-6">
       {/* Toolbar */}
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
+      <div className="flex flex-wrap items-center gap-4">
         {/* Search */}
-        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", fontSize: 15, pointerEvents: "none" }}>
-            ⌕
-          </span>
+        <div className="relative flex-1 min-w-[280px]">
+          <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-lg">⌕</span>
           <input
-            className="input"
-            placeholder="Search jobs, keywords, IDs…"
+            className="input w-full pl-12"
+            placeholder="Search operations, keywords, IDs…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: 34 }}
           />
         </div>
 
         {/* Filter pills */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div className="flex p-1.5 bg-white/5 rounded-2xl border border-white/5">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              style={{
-                padding: "6px 14px", borderRadius: 99, fontSize: 12, fontWeight: 500,
-                border: "1px solid",
-                borderColor: filter === f.key ? "var(--accent)" : "var(--border)",
-                background: filter === f.key ? "var(--accent-muted)" : "transparent",
-                color: filter === f.key ? "var(--accent)" : "var(--text-secondary)",
-                cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
-              }}
+              className={`px-4 py-1.5 rounded-xl text-[11px] font-bold transition-all ${filter === f.key ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-slate-500 hover:text-slate-300"}`}
             >
               {f.label}
             </button>
           ))}
         </div>
 
-        <button onClick={onRefresh} className="btn btn-ghost" style={{ fontSize: 13 }}>↻ Refresh</button>
-        <button onClick={onNewJob} className="btn btn-primary">+ New Job</button>
+        <div className="flex items-center gap-3">
+          <button onClick={onRefresh} className="btn-premium border border-white/5 hover:bg-white/5 text-slate-300 px-4">
+             <span className="text-base leading-none">↻</span>
+          </button>
+          <button onClick={onNewJob} className="btn-premium btn-premium-primary">+ New Job</button>
+        </div>
       </div>
 
       {/* Table card */}
-      <div className="card" style={{ overflow: "hidden" }}>
+      <div className="card-glass overflow-hidden bg-card/40 backdrop-blur-3xl">
         {loading ? (
-          <div style={{ padding: 40, display: "flex", flexDirection: "column", gap: 12 }}>
-            {[1, 2, 3].map((i) => <div key={i} className="shimmer" style={{ height: 52, width: "100%" }} />)}
+          <div className="p-10 flex flex-col gap-4">
+            {[1, 2, 3, 4, 5].map((i) => <div key={i} className="shimmer h-14 w-full rounded-2xl" />)}
           </div>
         ) : error ? (
-          <div style={{ padding: "40px 28px", textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>⚠</div>
-            <div style={{ color: "var(--rose)", fontWeight: 600, marginBottom: 4 }}>Connection Error</div>
-            <div style={{ color: "var(--text-muted)", fontSize: 13 }}>{error}</div>
-            <button onClick={onRefresh} className="btn btn-primary" style={{ marginTop: 16 }}>Retry</button>
+          <div className="p-20 text-center flex flex-col items-center gap-6">
+            <div className="size-16 rounded-3xl bg-rose-500/10 flex items-center justify-center text-3xl text-rose-500">⚠</div>
+            <div>
+              <div className="text-xl font-black mb-1">Connection Interrupted</div>
+              <p className="text-slate-500 text-sm max-w-sm">{error}</p>
+            </div>
+            <button onClick={onRefresh} className="btn-premium btn-premium-primary">Retry Connection</button>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: "60px 28px", textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 14, opacity: 0.4 }}>◈</div>
-            <div style={{ fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6 }}>
-              {jobs.length === 0 ? "No jobs yet" : "No jobs match your filter"}
-            </div>
-            <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-              {jobs.length === 0 ? "Create your first scraping job to get started" : "Try adjusting your search or filter"}
+          <div className="p-24 text-center flex flex-col items-center gap-6">
+            <div className="size-20 rounded-3xl bg-slate-800/30 flex items-center justify-center text-4xl text-slate-600">◈</div>
+            <div>
+              <div className="text-xl font-black mb-1">No Results Found</div>
+              <p className="text-slate-500 text-sm max-w-sm">
+                {jobs.length === 0 ? "You haven't launched any scraping jobs yet." : "Try adjusting your filters or search terms."}
+              </p>
             </div>
             {jobs.length === 0 && (
-              <button onClick={onNewJob} className="btn btn-primary" style={{ marginTop: 16 }}>
-                + Create First Job
-              </button>
+              <button onClick={onNewJob} className="btn-premium btn-premium-primary">+ Launch First Job</button>
             )}
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr>
-                  <th><SortBtn col="name" label="Job" /></th>
-                  <th>Keywords</th>
-                  <th><SortBtn col="status" label="Status" /></th>
-                  <th><SortBtn col="date" label="Created" /></th>
-                  <th>Config</th>
-                  <th>Actions</th>
+                <tr className="bg-white/[0.02]">
+                  <th className="px-8 py-5 border-b border-white/5"><SortBtn col="name" label="Job Name" /></th>
+                  <th className="px-8 py-5 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Keywords</th>
+                  <th className="px-8 py-5 border-b border-white/5"><SortBtn col="status" label="Status" /></th>
+                  <th className="px-8 py-5 border-b border-white/5"><SortBtn col="date" label="Timestamp" /></th>
+                  <th className="px-8 py-5 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Config</th>
+                  <th className="px-8 py-5 border-b border-white/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/[0.03]">
                 {filtered.map((job) => (
                   <JobRow
                     key={job.id}
                     job={job}
                     onDelete={handleDelete}
                     onDownload={handleDownload}
+                    onView={(id) => setViewingJob({ id, name: job.name })}
                     apiBase={apiBase}
                     dimmed={deletingId === job.id}
                   />
@@ -198,10 +192,19 @@ export default function JobsTable({ jobs: jobsProp, loading, error, apiBase, onR
       </div>
 
       {!loading && !error && (
-        <div style={{ marginTop: 10, fontSize: 12, color: "var(--text-muted)", textAlign: "right" }}>
-          Showing {filtered.length} of {jobs.length} jobs · Auto-refresh every 8s
+        <div className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-600 text-right px-4">
+          Manifesting {filtered.length} / {jobs.length} operations · Synced every 8s
         </div>
       )}
     </div>
+      {viewingJob && (
+        <CSVViewerModal
+          jobId={viewingJob.id}
+          jobName={viewingJob.name}
+          apiBase={apiBase}
+          onClose={() => setViewingJob(null)}
+        />
+      )}
+    </>
   );
 }

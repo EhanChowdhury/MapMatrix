@@ -97,8 +97,11 @@ export default function NewJobModal({ onJobCreated, onClose, apiBase }: Props) {
   }
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300" 
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-[#0a0d14] border border-white/10 rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
         {/* Header */}
         <div style={{ padding: "24px 28px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -115,7 +118,7 @@ export default function NewJobModal({ onJobCreated, onClose, apiBase }: Props) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ padding: "20px 28px 28px" }}>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ padding: "20px 28px 28px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
             {/* Name */}
@@ -145,7 +148,7 @@ export default function NewJobModal({ onJobCreated, onClose, apiBase }: Props) {
             </div>
 
             {/* Row: Lang + Zoom + Depth */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Language</label>
                 <select
@@ -180,7 +183,7 @@ export default function NewJobModal({ onJobCreated, onClose, apiBase }: Props) {
             </div>
 
             {/* Row: Lat + Lon + Radius */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="label">Latitude</label>
                 <input className="input" placeholder="37.9838" value={lat} onChange={(e) => setLat(e.target.value)} />
